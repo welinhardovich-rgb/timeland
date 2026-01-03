@@ -38,7 +38,9 @@ public class RBalancePlugin extends JavaPlugin {
         this.bossBarSystem = new BossBarSystem(this);
 
         // Register commands
-        getCommand("bal").setExecutor(new BalanceCommand(this));
+        BalanceCommand balanceCommand = new BalanceCommand(this);
+        getCommand("bal").setExecutor(balanceCommand);
+        getCommand("bal").setTabCompleter(balanceCommand);
 
         // Register events
         getServer().getPluginManager().registerEvents(new SignInteractListener(this), this);

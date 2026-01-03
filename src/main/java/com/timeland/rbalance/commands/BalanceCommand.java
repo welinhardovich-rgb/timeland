@@ -8,12 +8,19 @@ import org.bukkit.OfflinePlayer;
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandExecutor;
 import org.bukkit.command.CommandSender;
+import org.bukkit.command.TabCompleter;
 import org.bukkit.entity.Player;
 import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 
 import java.math.BigDecimal;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.List;
+import java.util.stream.Collectors;
 
-public class BalanceCommand implements CommandExecutor {
+public class BalanceCommand implements CommandExecutor, TabCompleter {
     private final RBalancePlugin plugin;
     private final InfoCommandHandler infoHandler;
     private final DepositCommandHandler depositHandler;
@@ -141,5 +148,72 @@ public class BalanceCommand implements CommandExecutor {
             player.sendMessage("§aБаланс " + target.getName() + " полностью сброшен.");
             plugin.getLogSystem().logAdmin("Reset all balances of " + target.getName() + " by " + player.getName());
         }
+    }
+
+    @Override
+    public @Nullable List<String> onTabComplete(@NotNull CommandSender sender, @NotNull Command command, @NotNull String alias, @NotNull String[] args) {
+        if (args.length == 1) {
+            List<String> subCommands = new ArrayList<>(Arrays.asList("deposit", "withdraw", "pay", "top", "bossbar", "history"));
+            if (sender.hasPermission("rbalance.admin")) {
+                subCommands.add("admin");
+            }
+            return filter(subCommands, args[0]);
+        }
+
+        if (args.length == 2) {
+            switch (args[0].toLowerCase()) {
+                case "deposit":
+                case "withdraw":
+                case "top":
+                    return filter(getResourceNames(), args[1]);
+                case "pay":
+                    return null; // Player names
+                case "bossbar":
+                    return filter(Arrays.asList("on", "off"), args[1]);
+                case "admin":
+                    if (sender.hasPermission("rbalance.admin")) {
+                        return filter(Arrays.asList("reload", "set", "reset"), args[1]);
+                    }
+                    break;
+            }
+        }
+
+        if (args.length == 3) {
+            switch (args[0].toLowerCase()) {
+                case "pay":
+                    return filter(getResourceNames(), args[2]);
+                case "admin":
+                    if (sender.hasPermission("rbalance.admin")) {
+                        String sub = args[1].toLowerCase();
+                        if (sub.equals("set") || sub.equals("reset")) {
+                            return null; // Player names
+                        }
+                    }
+                    break;
+            }
+        }
+
+        if (args.length == 4) {
+            if (args[0].equalsIgnoreCase("admin") && sender.hasPermission("rbalance.admin")) {
+                if (args[1].equalsIgnoreCase("set")) {
+                    return filter(getResourceNames(), args[3]);
+                }
+            }
+        }
+
+        return Collections.emptyList();
+    }
+
+    private List<String> getResourceNames() {
+        return Arrays.stream(ResourceType.values())
+                .map(Enum::name)
+                .map(String::toLowerCase)
+                .collect(Collectors.toList());
+    }
+
+    private List<String> filter(List<String> list, String input) {
+        return list.stream()
+                .filter(s -> s.toLowerCase().startsWith(input.toLowerCase()))
+                .collect(Collectors.toList());
     }
 }
